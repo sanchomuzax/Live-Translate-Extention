@@ -36,7 +36,7 @@ Powered by the Live Translate API from Google AI Studio.
 
 ### Step 1 — Download the extension
 
-Click **Code → Download ZIP** at the top of this page, then **extract** the archive.
+For a tested and packaged version, download the **live-translate-v1.5.0.zip** asset from the [latest GitHub release](https://github.com/sanchomuzax/Live-Translate-Extention/releases/latest), then **extract** the archive. Alternatively, use **Code → Download ZIP** and extract it.
 
 > Keep the extracted folder. Chrome loads the extension directly from that location — deleting or moving it will break the extension.
 
@@ -64,7 +64,12 @@ That's it. 🎉
 | **Start translating** | Open the tab that is playing audio, then **click the extension icon**. The badge reads `ON`, the original audio is muted, and the translated speech plays with subtitles. |
 | **Stop** | **Click the icon again.** The original audio returns to normal. |
 | **Switch tabs** | Just click the icon in the new tab — the previous session stops on its own. |
+| **Hide / show subtitles** | Click **×** in the overlay to collapse it to a bottom-right **CC** button; click **CC** to restore it. The spoken translation continues. |
 | **Change settings** | Right-click the icon → **Options**. |
+
+### Subtitles: minimize and restore
+
+To keep the page clear, click **×** on the top-right corner of the subtitle panel. It shrinks to a **CC** icon floating in the bottom-right corner. Tap **CC** to reopen the subtitles. Audio translation keeps running while the panel is minimized. Hidden subtitles are not sent to the page for rendering, which reduces unnecessary UI processing. On the next translation session the full panel opens again.
 
 ### Available settings
 

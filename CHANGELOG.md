@@ -3,6 +3,26 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — 2026-10-08
+
+### Added
+
+- A close button on the live subtitle panel minimizes it to a small floating **CC** button in the bottom-right corner.
+- Clicking **CC** restores the full subtitle panel without restarting the audio translation.
+- Responsive positioning for narrow viewports and accessible keyboard/ARIA labeling.
+
+### Improved
+
+- While minimized, subtitle fragments are no longer forwarded to the page or written to its DOM, reducing unnecessary UI work. Spoken translation continues normally.
+- Minimized state survives same-tab navigations when Chrome permits overlay reinjection.
+- A new translation session starts with the subtitle panel expanded.
+- The homepage link now points to the maintained fork.
+
+### Compatibility
+
+- Chrome Manifest V3, no new browser permissions and no new external services.
+- The audio capture, translation API, and settings behavior are unchanged.
+
 ## [1.4.0] — 2026-07-26
 
 ### Changed
