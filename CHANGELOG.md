@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] — 2026-10-09
+
+### Added
+
+- **Optional English/Hungarian filler cleanup in live subtitles**: removes common hesitation sounds (for example “um”, “uh”, “ööö”, “izé”) and clearly sentence-initial, comma-separated discourse markers (such as “you know,”, “szóval,”). Applies to on-screen source and translated captions only. Speech synthesis is not affected.
+- **Optional dynamic original-audio playback**: play original tab audio at full volume between translated speech segments; automatically reduce it to a selectable 0%, 15%, or 30% while translated voice plays, with smooth ramps.
+- Both features can be enabled independently in Options; both default to off to preserve the previous experience.
+- Added automated regression tests for bilingual filler cleanup and original-audio ducking timing.
+
+### Notes
+
+- Audio ducking is driven by actual playback of translated speech, not by source-language speech detection or music/speech source separation. Original speech may be audible before a delayed translation begins.
+- The Gemini Live Translate API does not currently expose a supported way to rewrite the generated spoken translation with a filler-free prompt. Only the displayed transcript is filtered.
+
 ## [1.5.0] — 2026-10-08
 
 ### Added
