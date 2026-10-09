@@ -134,10 +134,10 @@ test('offscreen does not forward hidden text but continues translated audio', ()
   assert.equal(audioChunks.length, 4);
 });
 
-test('v1.5.0 manifest keeps minimal Chrome permissions', () => {
+test('v1.6.0 manifest keeps minimal Chrome permissions', () => {
   const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '1.5.0');
+  assert.equal(manifest.version, '1.6.0');
   assert.equal(manifest.homepage_url, 'https://github.com/sanchomuzax/Live-Translate-Extention');
   assert.deepEqual(manifest.permissions, ['tabCapture', 'offscreen', 'storage', 'activeTab', 'scripting']);
 });
