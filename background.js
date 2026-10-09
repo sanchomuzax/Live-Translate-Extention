@@ -75,11 +75,14 @@ async function injectContentScript(tabId) {
 }
 
 async function startTranslation(tab) {
-  const { apiKey, targetLanguageCode, echoTargetLanguage, bufferMode } = await chrome.storage.local.get([
+  const { apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, filterFillers, originalAudioDucking, duckingLevel } = await chrome.storage.local.get([
     'apiKey',
     'targetLanguageCode',
     'echoTargetLanguage',
     'bufferMode',
+    'filterFillers',
+    'originalAudioDucking',
+    'duckingLevel',
   ]);
 
   if (!apiKey) {
@@ -97,7 +100,7 @@ async function startTranslation(tab) {
   await chrome.storage.session.remove('captionCollapsed');
   await ensureOffscreenDocument();
   await injectContentScript(tab.id);
-  await notifyTab(tab.id, { type: 'status', state: 'starting' });
+  await notifyTab(tab.id, { type: 'status', state: 'starting', filterFillers: !!filterFillers });
 
   await sendToOffscreen({
     type: 'start',
@@ -107,6 +110,8 @@ async function startTranslation(tab) {
     targetLanguageCode: targetLanguageCode || 'vi',
     echoTargetLanguage: !!echoTargetLanguage,
     bufferMode: bufferMode || 'balanced',
+    originalAudioDucking: !!originalAudioDucking,
+    duckingLevel: [0, 0.15, 0.3].includes(duckingLevel) ? duckingLevel : 0.15,
   });
 
   await setActiveTabId(tab.id);
@@ -161,7 +166,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.status !== 'complete') return;
   if ((await getActiveTabId()) !== tabId) return;
   if (await injectContentScript(tabId)) {
-    await notifyTab(tabId, { type: 'status', state: 'running', collapsed: await isCaptionCollapsed() });
+    const { filterFillers } = await chrome.storage.local.get('filterFillers');
+    await notifyTab(tabId, { type: 'status', state: 'running', collapsed: await isCaptionCollapsed(), filterFillers: !!filterFillers });
   }
 });
 
