@@ -128,10 +128,14 @@
   // markers are removed only at the start of a new sentence/utterance.
   function removeFillers(text) {
     return text
-      .replace(/(^|[^\p{L}\p{N}])(?:[öő]+|izé|uh+m*|um+|erm+|er+|hmm+)(?=$|[^\p{L}\p{N}])/giu, '$1')
-      .replace(/(^|[.!?…]\s*)(?:you\s+know|i\s+mean|szóval|tudod|hát|well|so)\s*,\s*/giu, '$1')
-      .replace(/\s+([,.;:!?…])/g, '$1')
-      .replace(/([,;])\s*([,;])/g, '$1$2');
+      // Never remove matching text from the middle of a normal word.
+      .replace(/(^|[^\p{L}\p{N}])(?:[öő]+|izé|uh+m*|um+|erm+|er+|hmm+)(?=$|[^\p{L}\p{N}])\s*[,;]?\s*/giu, '$1')
+      // Discourse markers can carry meaning. Only treat them as fillers
+      // when used as comma-terminated, sentence-initial interjections.
+      .replace(/(^|[.!?…]\s*)\s*(?:(?:you\s+know|i\s+mean|szóval|tudod|hát|well|so|like)\s*,\s*)+/giu, '$1')
+      .replace(/(^|[.!?…]\s*)[,;]\s*/g, '$1')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\s+([,.;:!?…])/g, '$1');
   }
 
   function renderCaption(el, raw, maxShown) {
