@@ -17,6 +17,7 @@
   let removeTimer = null;
   let toggleButton = null;
   let collapsed = false;
+  let filterFillers = false;
 
   function ensureOverlay() {
     if (overlay && overlay.isConnected) return;
@@ -122,8 +123,23 @@
     statusTextEl.textContent = text;
   }
 
+  // Match standalone hesitation noises in English/Hungarian, without stripping
+  // embedded words (e.g. "summer" or "rumor"). Comma-separated discourse
+  // markers are removed only at the start of a new sentence/utterance.
+  function removeFillers(text) {
+    return text
+      // Never remove matching text from the middle of a normal word.
+      .replace(/(^|[^\p{L}\p{N}])(?:[öő]+|izé|uh+m*|um+|erm+|er+|hmm+)(?=$|[^\p{L}\p{N}])\s*[,;]?\s*/giu, '$1')
+      // Discourse markers can carry meaning. Only treat them as fillers
+      // when used as comma-terminated, sentence-initial interjections.
+      .replace(/(^|[.!?…]\s*)\s*(?:(?:you\s+know|i\s+mean|szóval|tudod|hát|well|so|like)\s*,\s*)+/giu, '$1')
+      .replace(/(^|[.!?…]\s*)[,;]\s*/g, '$1')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\s+([,.;:!?…])/g, '$1');
+  }
+
   function renderCaption(el, raw, maxShown) {
-    let text = raw.trimStart();
+    let text = (filterFillers ? removeFillers(raw) : raw).trimStart();
     if (text.length > maxShown) {
       // Cut at the window, then drop the leading partial word.
       text = text.slice(-maxShown).replace(/^\S{0,30}\s+/, '');
@@ -138,6 +154,7 @@
     if (!message || typeof message.type !== 'string') return;
 
     if (message.type === 'status') {
+      if (typeof message.filterFillers === 'boolean') filterFillers = message.filterFillers;
       // Restore the minimized state after a page navigation.
       if (typeof message.collapsed === 'boolean') setCollapsed(message.collapsed, false);
       switch (message.state) {

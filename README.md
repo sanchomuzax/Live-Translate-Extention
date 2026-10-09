@@ -36,7 +36,7 @@ Powered by the Live Translate API from Google AI Studio.
 
 ### Step 1 — Download the extension
 
-For a tested and packaged version, download the **live-translate-v1.5.0.zip** asset from the [latest GitHub release](https://github.com/sanchomuzax/Live-Translate-Extention/releases/latest), then **extract** the archive. Alternatively, use **Code → Download ZIP** and extract it.
+For a tested and packaged version, download the **live-translate-v1.6.0.zip** asset from the [latest GitHub release](https://github.com/sanchomuzax/Live-Translate-Extention/releases/latest), then **extract** the archive. Alternatively, use **Code → Download ZIP** and extract it.
 
 > Keep the extracted folder. Chrome loads the extension directly from that location — deleting or moving it will break the extension.
 
@@ -79,8 +79,20 @@ To keep the page clear, click **×** on the top-right corner of the subtitle pan
 | **Target language** | 70+ languages. Defaults to Vietnamese. |
 | **Playback smoothness** | Three profiles — *fast* (lowest delay, more prone to dropouts on a weak connection), *balanced* (recommended), and *smooth* (roughly one extra second of buffer, fewest interruptions). |
 | **Echo matching audio** | When the source audio is already in your target language, choose whether to re-read it verbatim or stay silent (silent by default). |
+| **Remove fillers from subtitles** | Optional cleanup for common English/Hungarian hesitation words, e.g. “um”, “uh”, “ööö”, “izé”, and comma-separated introductory phrases. Affects subtitles only, **not translated speech audio**. Disabled by default. |
+| **Original sound between translated speech** | Optional dynamic volume mixing: hear the original tab sound/music at full volume between translated voice segments, duck to 0%, 15%, or 30% while translated voice plays. Disabled by default. |
 
 ---
+
+### Hearing the source between translated speech
+
+In **Options**, enable **Let original sound and music play between translated speech**. The captured tab audio will be audible during gaps in the *translated* voice and will fade down while the translation speaks. Choose how much of the original audio should remain during translation (0%, 15%, or 30%).
+
+This is based on translated speech playback, **not** a music-separation or voice-activity-detection model. An untranslated source-language speaker may be heard while the translation is delayed or silent, and music playing underneath translated speech is reduced along with the rest of the original audio. If you want only translated speech, leave the option off.
+
+### Subtitle hesitation cleanup
+
+Enable **Remove hesitation and filler words from subtitles** in **Options** to hide common English/Hungarian fillers and clearly introductory discourse markers in the source and translated subtitles. The filter does not alter the Google-generated voice; the translation model does not support a custom speech-cleanup instruction. Meaningful words, including some contextual uses of “so”, “like”, “szóval”, and “tudod”, are preserved when they are not in the specific introductory filler form, but occasional false positives are possible.
 
 ## 💰 Cost
 
