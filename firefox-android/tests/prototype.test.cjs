@@ -15,7 +15,7 @@ test('Firefox Android manifest is self-contained MV2 with mobile declaration',()
 });
 test('AMO release compatibility: name and data consent require Firefox Android 142+',()=>{
   assert.ok(manifest.name.length <= 45, 'AMO limits manifest name to 45 characters');
-  assert.equal(manifest.version, '1.6.4');
+  assert.equal(manifest.version, '1.6.5');
   assert.notEqual(manifest.browser_specific_settings.gecko.id, 'live-translate-firefox@sanchomuzax.github.io');
   assert.match(manifest.browser_specific_settings.gecko.id, /^[a-z0-9.-]+@[a-z0-9.-]+$/i);
   assert.doesNotMatch(manifest.name, /\b(?:mozilla|firefox)\b/i, 'Mozilla trademarks cannot appear in add-on names');
@@ -31,11 +31,15 @@ test('all JavaScript files compile',()=>{
 test('frontend and background contain capture and Live bridge paths',()=>{
   const content=fs.readFileSync(path.join(root,'firefox-content.js'),'utf8');
   const bg=fs.readFileSync(path.join(root,'background.js'),'utf8');
-  assert.match(content,/captureStream\|\|media\.mozCaptureStream/);
+  assert.match(content,/media\.captureStream \|\| media\.mozCaptureStream/);
   assert.match(content,/firefox-pcm/);
   assert.match(bg,/BidiGenerateContent/);
   assert.match(bg,/setupComplete/);
   assert.match(bg,/binaryType = 'arraybuffer'/);
   assert.match(bg,/firefox-audio/);
-  assert.match(content,/s\.media\.muted=s\.wasMuted/);
+  assert.match(content,/s\.media\.muted = s\.wasMuted/);
+  assert.match(content,/createScriptProcessor/);
+  assert.match(content,/start audio/);
+  assert.match(content,/new AudioWorkletNode\(captureContext, 'firefox-pcm-capture'\)/);
+  assert.match(bg,/start media capture/);
 });
