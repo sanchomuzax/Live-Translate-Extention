@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Live Translate Mobile",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Experimental live translation for HTML5 audio and video in a mobile browser.",
   "homepage_url": "https://github.com/sanchomuzax/Live-Translate-Extention",
   "permissions": [
@@ -28,7 +28,7 @@
   "content_security_policy": "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com",
   "browser_specific_settings": {
     "gecko": {
-      "id": "live-translate-firefox@sanchomuzax.github.io",
+      "id": "live-translate-mobile-unlisted-7b2c4d8e@sanchomuzax.github.io",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [
