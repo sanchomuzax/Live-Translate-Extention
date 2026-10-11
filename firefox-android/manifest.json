@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+  "name": "Live Translate — Firefox Android (Experimental)",
+  "version": "1.6.1",
+  "description": "Experimental Live Translate for Firefox Android HTML5 audio/video elements.",
+  "homepage_url": "https://github.com/sanchomuzax/Live-Translate-Extention",
+  "permissions": ["activeTab", "storage", "https://generativelanguage.googleapis.com/*"],
+  "browser_action": {"default_title": "Start / stop Live Translate"},
+  "background": {"scripts": ["background.js"], "persistent": true},
+  "options_ui": {"page": "options.html", "open_in_tab": true},
+  "web_accessible_resources": ["pcm-worklet.js"],
+  "content_security_policy": "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com",
+  "browser_specific_settings": {
+    "gecko": {"id": "live-translate-firefox@sanchomuzax.github.io", "strict_min_version": "128.0"},
+    "gecko_android": {"strict_min_version": "128.0"}
+  }
+}
