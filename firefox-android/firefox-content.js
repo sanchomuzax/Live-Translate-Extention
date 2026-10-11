@@ -154,67 +154,128 @@
     }catch(e){console.warn('Firefox translated audio playback failed',e);}
   }
   async function start(settings) {
-    if(session) await stop();
-    filterFillers=!!settings.filterFillers;
-    collapsed=false;rawInput='';rawOutput='';
-    ensureOverlay();updateToggle();
-    setStatus('connecting','Capturing media…');
-    const media=getMedia();
-    if(!media)throw new Error('No playing HTML5 video/audio element found. Start playback first. Embedded/DRM players may not work.');
-    const capture=media.captureStream||media.mozCaptureStream;
-    let stream;
-    try{stream=capture.call(media);}catch(e){throw new Error('Firefox refused audio capture: '+e.message);}
-    if(!stream?.getAudioTracks().length)throw new Error('This media element exposes no capturable audio track.');
-    const captureContext=new AudioContext();
-    let playbackContext;
+    let stage = 'initialization';
+    let captureContext, playbackContext, media, originalMuted, processor;
     try {
-      await captureContext.audioWorklet.addModule(browser.runtime.getURL('pcm-worklet.js'));
-      playbackContext=new AudioContext();
-      const source=captureContext.createMediaStreamSource(stream);
-      const worklet=new AudioWorkletNode(captureContext,'firefox-pcm-capture',{
-        processorOptions:{chunkSize:Math.round(captureContext.sampleRate*CHUNK_MS/1000)}
-      });
-      const silent=captureContext.createGain();silent.gain.value=0;
-      source.connect(worklet);worklet.connect(silent);silent.connect(captureContext.destination);
-      const duck=settings.originalAudioDucking===true;
-      const originalGain=duck?captureContext.createGain():null;
-      if(originalGain){
-        originalGain.gain.value=1;
+      if (session) await stop();
+      filterFillers = !!settings.filterFillers;
+      collapsed = false; rawInput = ''; rawOutput = '';
+      ensureOverlay(); updateToggle();
+      setStatus('connecting', 'Capturing media…');
+
+      stage = 'find HTML5 media';
+      media = getMedia();
+      if (!media) throw new Error('No playing HTML5 video/audio element found. Start playback first. Embedded/DRM players may not work.');
+      originalMuted = media.muted;
+      stage = 'captureStream';
+      const capture = media.captureStream || media.mozCaptureStream;
+      const stream = capture.call(media);
+      if (!stream?.getAudioTracks().length) throw new Error('This media element exposes no capturable audio track.');
+
+      stage = 'create audio context';
+      captureContext = new AudioContext();
+      playbackContext = new AudioContext();
+      stage = 'create media source';
+      const source = captureContext.createMediaStreamSource(stream);
+
+      stage = 'initialize audio processor';
+      let useWorklet = false;
+      try {
+        await captureContext.audioWorklet.addModule(browser.runtime.getURL('pcm-worklet.js'));
+        // Firefox must structured-clone AudioWorkletNode options. Passing even a
+        // simple processorOptions object can fail across isolated worlds.
+        // The worklet already has a self-contained default chunk size.
+        processor = new AudioWorkletNode(captureContext, 'firefox-pcm-capture');
+        useWorklet = true;
+      } catch (workletError) {
+        stage = 'ScriptProcessor fallback';
+        if (typeof captureContext.createScriptProcessor !== 'function') {
+          throw new Error('AudioWorklet failed (' + workletError.message + '); no ScriptProcessor fallback available.');
+        }
+        console.warn('AudioWorklet unavailable, using Firefox ScriptProcessor fallback:', workletError);
+        processor = captureContext.createScriptProcessor(4096, 1, 1);
+        const chunkSize = Math.round(captureContext.sampleRate * CHUNK_MS / 1000);
+        let pending = new Float32Array(chunkSize), filled = 0;
+        processor.onaudioprocess = event => {
+          event.outputBuffer.getChannelData(0).fill(0);
+          const input = event.inputBuffer.getChannelData(0);
+          for (let i = 0; i < input.length; i++) {
+            pending[filled++] = input[i];
+            if (filled === chunkSize) {
+              const chunk = pending;
+              pending = new Float32Array(chunkSize);
+              filled = 0;
+              if (session?.processor === processor) sendPCM(chunk, captureContext.sampleRate);
+            }
+          }
+        };
+      }
+
+      stage = 'connect audio graph';
+      const silent = captureContext.createGain(); silent.gain.value = 0;
+      source.connect(processor); processor.connect(silent); silent.connect(captureContext.destination);
+      const duck = settings.originalAudioDucking === true;
+      const originalGain = duck ? captureContext.createGain() : null;
+      if (originalGain) {
+        originalGain.gain.value = 1;
         source.connect(originalGain);
         originalGain.connect(captureContext.destination);
       }
-      const s={media,stream,captureContext,playbackContext,source,worklet,silent,originalGain,
-        duckLevel:[0,.15,.3].includes(Number(settings.duckingLevel))?Number(settings.duckingLevel):.15,
-        duckIntervals:[],nextPlayTime:0,initialLead:({fast:.2,balanced:.4,smooth:.8}[settings.bufferMode]??.4),
-        wasMuted:media.muted};
-      session=s;
-      worklet.port.onmessage=e=>{
-        if(session!==s)return;
-        try{browser.runtime.sendMessage({type:'firefox-pcm',base64:floatToPCM(e.data,captureContext.sampleRate)}).catch(()=>{});}
-        catch(_){/* source may be gone */}
+      const s = {
+        media, stream, captureContext, playbackContext, source, processor, silent, originalGain,
+        duckLevel: [0, .15, .3].includes(Number(settings.duckingLevel)) ? Number(settings.duckingLevel) : .15,
+        duckIntervals: [], nextPlayTime: 0,
+        initialLead: BUFFER_MODES[settings.bufferMode] ?? .4,
+        wasMuted: originalMuted
       };
-      // HTMLMediaElement captureStream() should keep capturing despite muting
-      // original playback. Gecko versions differ: verify on the target device.
-      media.muted=true;
-      if(captureContext.state==='suspended')await captureContext.resume();
-      if(playbackContext.state==='suspended')await playbackContext.resume();
-      setStatus('connecting','Connecting to translation…');
-      return {capturing:true};
-    }catch(err){
-      try{await captureContext.close();}catch(_){}
-      if(playbackContext)try{await playbackContext.close();}catch(_){}
-      throw err;
+      session = s;
+      if (useWorklet) {
+        processor.port.onmessage = event => {
+          if (session !== s) return;
+          sendPCM(event.data, captureContext.sampleRate);
+        };
+        processor.onprocessorerror = () => setStatus('error', 'AudioWorklet runtime failure; restart translation.');
+      }
+
+      stage = 'start audio';
+      media.muted = true;
+      if (captureContext.state === 'suspended') await captureContext.resume();
+      if (playbackContext.state === 'suspended') await playbackContext.resume();
+      setStatus('connecting', 'Connecting to translation…');
+      return {capturing: true};
+    } catch (error) {
+      const reason = stage + ': ' + (error?.message || String(error));
+      console.error('Live Translate startup failed:', reason, error);
+      if (session) await stop();
+      else {
+        if (media && originalMuted !== undefined) media.muted = originalMuted;
+        if (captureContext) try {await captureContext.close();} catch (_) {}
+        if (playbackContext) try {await playbackContext.close();} catch (_) {}
+      }
+      throw new Error(reason);
+    }
+  }
+  function sendPCM(samples, sampleRate) {
+    try {
+      const base64 = floatToPCM(samples, sampleRate);
+      browser.runtime.sendMessage({type: 'firefox-pcm', base64}).catch(() => {});
+    } catch (error) {
+      console.warn('Firefox PCM message failed', error);
     }
   }
   async function stop() {
-    const s=session;session=null;
-    if(!s)return;
-    try{s.worklet.port.onmessage=null;}catch(_){}
-    try{s.source.disconnect();s.worklet.disconnect();s.silent.disconnect();s.originalGain?.disconnect();}catch(_){}
-    try{s.media.muted=s.wasMuted;}catch(_){}
-    try{await s.captureContext.close();await s.playbackContext.close();}catch(_){}
-    if(overlay){overlay.remove();overlay=null;}
-    collapsed=false;rawInput='';rawOutput='';
+    const s = session; session = null;
+    if (!s) return;
+    try {
+      if (s.processor.port) s.processor.port.onmessage = null;
+      s.processor.onaudioprocess = null;
+      s.source.disconnect(); s.processor.disconnect();
+      s.silent.disconnect(); s.originalGain?.disconnect();
+    } catch (_) {}
+    try { s.media.muted = s.wasMuted; } catch (_) {}
+    try { await s.captureContext.close(); await s.playbackContext.close(); } catch (_) {}
+    if (overlay) {overlay.remove(); overlay = null;}
+    collapsed = false; rawInput = ''; rawOutput = '';
   }
   browser.runtime.onMessage.addListener(message=>{
     if(message?.type==='firefox-start')return start(message.settings||{}).catch(error=>{
