@@ -1,0 +1,9 @@
+#__live_translate_firefox{all:initial;position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:2147483647;width:min(92vw,680px);max-width:680px;box-sizing:border-box;background:rgba(18,22,32,.92);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 42px 14px 15px;color:#fff;font:14px/1.4 system-ui,sans-serif;box-shadow:0 6px 25px #0008}
+#__live_translate_firefox .lt-status{font-size:12px;color:#bbd0ff;margin-bottom:4px}
+#__live_translate_firefox .lt-output{font-size:17px;font-weight:600;margin:4px 0;overflow-wrap:anywhere}
+#__live_translate_firefox .lt-input{font-size:12px;color:#bcc8d9;overflow-wrap:anywhere}
+#__live_translate_firefox button{all:unset;position:absolute;top:6px;right:6px;display:grid;place-items:center;cursor:pointer;min-width:32px;min-height:32px;color:white;font:bold 22px/1 system-ui,sans-serif}
+#__live_translate_firefox button:focus-visible{outline:2px solid #9ab4ff}
+#__live_translate_firefox[data-collapsed="true"]{left:auto;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:none;width:48px;height:48px;padding:0;border-radius:50%;}
+#__live_translate_firefox[data-collapsed="true"] .lt-body{display:none}
+#__live_translate_firefox[data-collapsed="true"] button{position:static;width:48px;height:48px;border-radius:50%;font-size:15px}
