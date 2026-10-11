@@ -15,7 +15,8 @@ test('Firefox Android manifest is self-contained MV2 with mobile declaration',()
 });
 test('AMO release compatibility: name and data consent require Firefox Android 142+',()=>{
   assert.ok(manifest.name.length <= 45, 'AMO limits manifest name to 45 characters');
-  assert.equal(manifest.version, '1.6.2');
+  assert.equal(manifest.version, '1.6.3');
+  assert.doesNotMatch(manifest.name, /\b(?:mozilla|firefox)\b/i, 'Mozilla trademarks cannot appear in add-on names');
   assert.ok(Number.parseInt(manifest.browser_specific_settings.gecko.strict_min_version,10) >= 140);
   assert.ok(Number.parseInt(manifest.browser_specific_settings.gecko_android.strict_min_version,10) >= 142);
   assert.ok(manifest.browser_specific_settings.gecko.data_collection_permissions.required.length > 0);
