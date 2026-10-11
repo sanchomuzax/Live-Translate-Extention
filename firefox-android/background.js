@@ -93,17 +93,22 @@ browser.browserAction.onClicked.addListener(async tab => {
   const config = await browser.storage.local.get(['apiKey','targetLanguageCode','bufferMode','echoTargetLanguage','filterFillers','originalAudioDucking','duckingLevel']);
   if (!config.apiKey) { await browser.runtime.openOptionsPage(); return; }
   const s = {tabId, config:{...config, targetLanguageCode:config.targetLanguageCode || 'hu'}, socket:null, ready:false, everReady:false, attempts:0, stopped:false, retryTimer:null};
+  let stage = 'inject CSS';
   try {
     await browser.tabs.insertCSS(tabId, {file:'overlay.css'});
+    stage = 'inject content script';
     await browser.tabs.executeScript(tabId, {file:'firefox-content.js'});
     sessions.set(tabId, s);
     activeTabId = tabId;
-    const result = await browser.tabs.sendMessage(tabId, {type:'firefox-start', settings:s.config});
+    stage = 'start media capture';
+    const result = await browser.tabs.sendMessage(tabId, {type:'firefox-start', settings:JSON.parse(JSON.stringify(s.config))});
     if (!result?.capturing) throw new Error(result?.reason || 'No capturable audio found on this page.');
+    stage = 'start Gemini connection';
     connect(s);
+    stage = 'set badge';
     await browser.browserAction.setBadgeText({tabId, text:'…'});
   } catch (err) {
-    await send(tabId, {type:'firefox-stop', error:String(err?.message || err)});
+    await send(tabId, {type:'firefox-stop', error:stage + ': ' + String(err?.message || err)});
     await stop(tabId, false);
   }
 });
