@@ -1,4 +1,4 @@
-# Live Translate — Firefox Android experimental (1.6.1)
+# Live Translate — Firefox Android experimental (1.6.2)
 
 This is an **experimental adaptation**, NOT equivalent to the Chrome extension.
 
