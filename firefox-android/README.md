@@ -18,6 +18,10 @@ This is an **experimental adaptation**, NOT equivalent to the Chrome extension.
 - The original media element is muted while translation runs and its mute state is restored when translation stops. If the tab crashes, refreshing the page restores its normal state.
 - Only an explicitly started page is injected; the browser action must be clicked while playback is active.
 
+## Data handling and required disclosures
+
+The extension transfers the selected media element's **audio content** to Google's Gemini Live API for translation. An API key is sent to Google for authorization. If the selected media includes a call or meeting, personal communications could be processed. No audio is sent to the fork maintainer and there is no analytics or intermediary server. Data may be handled by Google according to the selected Google AI Studio project/tier terms.
+
 ## Installation on Firefox Android Release
 
 The produced archive is **unsigned**, so Firefox's **Install extension from file** menu WILL reject it even if the ZIP itself is valid. Mozilla signing is required. **Do not rename the ZIP to XPI and expect it to install**.
