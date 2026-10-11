@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Translate — Firefox settings</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#171b25;color:#edf1fa;font:16px/1.5 system-ui,sans-serif}main{max-width:640px;margin:auto;padding:20px}h1{font-size:22px;margin-top:0}label{display:block;margin:16px 0 5px;font-weight:600}input[type=password],select{box-sizing:border-box;width:100%;padding:12px;border-radius:8px;background:#252e40;color:white;border:1px solid #60718c}label.check{display:flex;align-items:flex-start;gap:12px;font-weight:normal}label.check input{width:20px;height:20px;flex:none}button{padding:12px 22px;border:0;border-radius:8px;background:#657dea;color:white;font-size:16px;font-weight:700}small,p{color:#bac4d7}#result{min-height:1.5em}
+</style></head><body><main>
+<h1>Live Translate — Firefox Android experimental</h1>
+<p>This Firefox edition captures audio from HTML5 video/audio elements only. It does not capture arbitrary tab or device audio.</p>
+<label for="apiKey">Google AI Studio API key</label><input id="apiKey" type="password" autocomplete="off" spellcheck="false">
+<label for="targetLanguageCode">Target language</label>
+<select id="targetLanguageCode">
+<option value="hu">Hungarian</option><option value="en">English</option><option value="de">German</option>
+<option value="fr">French</option><option value="es">Spanish</option><option value="it">Italian</option>
+<option value="vi">Vietnamese</option><option value="pl">Polish</option><option value="pt-BR">Portuguese</option>
+<option value="ro">Romanian</option><option value="ru">Russian</option><option value="ja">Japanese</option>
+<option value="ko">Korean</option><option value="zh-Hans">Chinese (simplified)</option>
+</select>
+<label for="bufferMode">Playback smoothness</label><select id="bufferMode"><option value="fast">Fast</option><option value="balanced">Balanced</option><option value="smooth">Smooth</option></select>
+<label class="check"><input type="checkbox" id="echoTargetLanguage"><span>Read back speech when already in the target language</span></label>
+<label class="check"><input type="checkbox" id="filterFillers"><span>Filter English and Hungarian fillers in subtitles (not speech)</span></label>
+<label class="check"><input type="checkbox" id="originalAudioDucking"><span>Allow original audio between translated speech</span></label>
+<label for="duckingLevel">Original sound level while translation speaks</label>
+<select id="duckingLevel"><option value="0">0% — mute</option><option value="0.15">15% — quiet</option><option value="0.3">30% — audible</option></select>
+<p>With audio ducking enabled, original voices as well as music may be audible during translation gaps.</p>
+<button id="save">Save settings</button><p id="result" role="status"></p>
+</main><script src="options.js"></script></body></html>
