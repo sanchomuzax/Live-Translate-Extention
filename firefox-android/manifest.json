@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Live Translate Mobile",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "Experimental live translation for HTML5 audio and video in a mobile browser.",
   "homepage_url": "https://github.com/sanchomuzax/Live-Translate-Extention",
   "permissions": [
