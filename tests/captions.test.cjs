@@ -134,10 +134,113 @@ test('offscreen does not forward hidden text but continues translated audio', ()
   assert.equal(audioChunks.length, 4);
 });
 
-test('v1.6.0 manifest keeps minimal Chrome permissions', () => {
+test('v1.7.0 manifest keeps minimal Chrome permissions', () => {
   const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '1.6.0');
+  assert.equal(manifest.version, '1.7.0');
   assert.equal(manifest.homepage_url, 'https://github.com/sanchomuzax/Live-Translate-Extention');
   assert.deepEqual(manifest.permissions, ['tabCapture', 'offscreen', 'storage', 'activeTab', 'scripting']);
+});
+
+test('pause/play button stays beside CC in one carrier and reflects offscreen state', () => {
+  const root = new Element('body');
+  const listeners = [];
+  const outgoing = [];
+  const chrome = {
+    runtime: {
+      id: 'test-extension',
+      onMessage: { addListener(fn) { listeners.push(fn); } },
+      sendMessage(msg) { outgoing.push(msg); return Promise.resolve(); },
+    },
+  };
+  const document = {
+    body: root, documentElement: new Element('html'),
+    createElement(tag) { return new Element(tag); },
+  };
+  const context = vm.createContext({
+    window: {}, document, chrome, setTimeout() { return 1; }, clearTimeout() {},
+  });
+  vm.runInContext(fs.readFileSync('content.js', 'utf8'), context);
+  const receive = message => listeners.forEach(fn => fn(message, { id: chrome.runtime.id }));
+
+  receive({ type: 'status', state: 'starting' });
+  const overlay = root.children.at(-1);
+  const controls = find(overlay, 'lt-controls');
+  const pause = find(overlay, 'lt-playback-toggle');
+  const cc = find(overlay, 'lt-toggle');
+  assert.ok(controls);
+  assert.equal(controls.children[0], pause);
+  assert.equal(controls.children[1], cc);
+  assert.equal(overlay.dataset.playbackActive, 'false', 'audio controls appear on first speech');
+
+  receive({ type: 'playbackState', active: true, paused: false });
+  assert.equal(overlay.dataset.playbackActive, 'true');
+  assert.equal(pause.dataset.paused, 'false');
+  assert.equal(pause.attributes['aria-label'], 'Pause translated speech');
+
+  cc.listeners.click();
+  assert.equal(overlay.dataset.collapsed, 'true');
+  assert.equal(find(overlay, 'lt-controls').children[0], pause);
+  pause.listeners.click();
+  assert.equal(outgoing.at(-1).type, 'setPlaybackPaused');
+  assert.equal(outgoing.at(-1).paused, true);
+  assert.equal(outgoing.at(-1).target, 'background');
+  // No optimistic update: audio process sends authoritative state.
+  assert.equal(pause.dataset.paused, 'false');
+  receive({ type: 'playbackState', active: true, paused: true });
+  assert.equal(pause.dataset.paused, 'true');
+  assert.equal(pause.attributes['aria-label'], 'Resume translated speech');
+  pause.listeners.click();
+  assert.equal(outgoing.at(-1).paused, false);
+  receive({ type: 'playbackState', active: true, paused: false });
+  assert.equal(pause.dataset.paused, 'false');
+
+  cc.listeners.click();
+  assert.equal(overlay.dataset.collapsed, 'false');
+  assert.equal(controls.children[0], pause, 'expanded view reuses the same playback button');
+  receive({ type: 'status', state: 'stopped' });
+  receive({ type: 'status', state: 'starting' });
+  assert.equal(root.children.at(-1).dataset.playbackActive, 'false', 'new session clears state');
+});
+
+test('offscreen pause mutes only translated output without suspending its audio clock', () => {
+  const messages = [];
+  const chrome = {
+    runtime: {
+      id: 'test-extension',
+      onMessage: { addListener() {} },
+      sendMessage(msg) { messages.push(msg); return Promise.resolve(); },
+    },
+  };
+  const context = vm.createContext({chrome});
+  vm.runInContext(fs.readFileSync('offscreen.js','utf8'),context);
+  const gainCalls = [];
+  const makeGain = prefix => ({
+    value: 1,
+    cancelScheduledValues(t) { gainCalls.push(prefix + ':cancel'); },
+    setTargetAtTime(v,t,rate) { gainCalls.push(prefix + ':target:' + v); },
+  });
+  const mock = {
+    tabId: 7,
+    playbackStarted: true,
+    playbackPaused: false,
+    playbackContext: {currentTime: 10, state: 'running'},
+    captureContext: {currentTime: 15},
+    playbackGain: {gain: makeGain('out')},
+    originalAudioGain: {gain: makeGain('source')},
+    originalAudioIntervals: [{start:15,end:17}],
+  };
+  context.mock = mock;
+  vm.runInContext('session = mock',context);
+  vm.runInContext('setPlaybackPaused(session,true)',context);
+  assert.equal(mock.playbackPaused,true);
+  assert.ok(gainCalls.includes('out:target:0'));
+  assert.ok(gainCalls.includes('source:target:1'), 'original audio recovers');
+  assert.equal(mock.originalAudioIntervals.length,0);
+  assert.equal(messages.at(-1).type, 'playbackState');
+  assert.equal(messages.at(-1).paused,true);
+  vm.runInContext('setPlaybackPaused(session,false)',context);
+  assert.equal(mock.playbackPaused,false);
+  assert.ok(gainCalls.includes('out:target:1'));
+  assert.equal(mock.playbackContext.state,'running', 'audio clock was never suspended');
 });
