@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] — 2026-10-12
+
+### Added
+
+- **Pause/resume translated speech** with an accessible circular control directly to the left of the X in expanded captions.
+- In minimized mode, a single compact shared carrier shows **[ ‖ CC ]** while speaking and **[ ▶ CC ]** when paused.
+- The control appears on the first translated audio packet. Its state is synchronized with the offscreen audio process and restored across tab navigation.
+
+### Behavior
+
+- Pausing mutes only synthesized translation audio. Transcription and streaming to Gemini continue; missed speech is **not queued for replay**, keeping the translation live.
+- The playback AudioContext clock remains active to avoid accumulated latency.
+- When the optional original-audio ducking feature is enabled, pausing translation restores original tab audio.
+
 ## [1.6.0] — 2026-10-09
 
 ### Added
