@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.7.2] — 2026-10-12
+
+### Added
+
+- **5% original-audio volume** option while translated speech plays, between mute (0%) and quiet (15%).
+- Preserves all existing 0%, 15% and 30% levels. The level is saved and restored from extension settings, and honored by both the background validation and offscreen gain scheduler.
+- Maintains the matching-source-language exception from 1.7.1: when source speech is already in the target language and echo is off, the original remains at 100%.
+
 ## [1.7.1] — 2026-10-12
 
 ### Fixed
