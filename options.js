@@ -65,7 +65,7 @@ async function load() {
   echoCheckbox.checked = !!echoTargetLanguage;
   filterFillersCheckbox.checked = !!filterFillers;
   originalAudioDuckingCheckbox.checked = !!originalAudioDucking;
-  duckingLevelSelect.value = ['0', '0.15', '0.30'].includes(String(duckingLevel)) ? String(duckingLevel) : '0.15';
+  duckingLevelSelect.value = ['0', '0.05', '0.15', '0.30'].includes(String(duckingLevel)) ? String(duckingLevel) : '0.15';
   updateDuckingControls();
 }
 
