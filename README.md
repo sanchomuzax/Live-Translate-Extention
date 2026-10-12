@@ -80,13 +80,13 @@ To keep the page clear, click **×** on the top-right corner of the subtitle pan
 | **Playback smoothness** | Three profiles — *fast* (lowest delay, more prone to dropouts on a weak connection), *balanced* (recommended), and *smooth* (roughly one extra second of buffer, fewest interruptions). |
 | **Echo matching audio** | When the source audio is already in your target language, choose whether to re-read it verbatim or stay silent (silent by default). |
 | **Remove fillers from subtitles** | Optional cleanup for common English/Hungarian hesitation words, e.g. “um”, “uh”, “ööö”, “izé”, and comma-separated introductory phrases. Affects subtitles only, **not translated speech audio**. Disabled by default. |
-| **Original sound between translated speech** | Optional dynamic volume mixing: hear the original tab sound/music at full volume between translated voice segments, duck to 0%, 15%, or 30% while translated voice plays. When source speech is detected as already in the target language and **Echo matching audio** is off, the original stays at 100%. Disabled by default. |
+| **Original sound between translated speech** | Optional dynamic volume mixing: hear the original tab sound/music at full volume between translated voice segments, duck to 0%, 5%, 15%, or 30% while translated voice plays. When source speech is detected as already in the target language and **Echo matching audio** is off, the original stays at 100%. Disabled by default. |
 
 ---
 
 ### Hearing the source between translated speech
 
-In **Options**, enable **Let original sound and music play between translated speech**. The captured tab audio will be audible during gaps in the *translated* voice and will fade down while the translation speaks. Choose how much of the original audio should remain during translation (0%, 15%, or 30%).
+In **Options**, enable **Let original sound and music play between translated speech**. The captured tab audio will be audible during gaps in the *translated* voice and will fade down while the translation speaks. Choose how much of the original audio should remain during translation (0%, 5%, 15%, or 30%).
 
 This is based on translated speech playback, **not** a music-separation or voice-activity-detection model. An untranslated source-language speaker may be heard while the translation is delayed or silent, and music playing underneath translated speech is reduced along with the rest of the original audio. If you want only translated speech, leave the option off.
 
