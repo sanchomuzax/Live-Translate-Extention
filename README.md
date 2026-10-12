@@ -75,7 +75,7 @@ That's it. 🎉
 | **Playback smoothness** | Three profiles — *fast* (lowest delay, more prone to dropouts on a weak connection), *balanced* (recommended), and *smooth* (roughly one extra second of buffer, fewest interruptions). |
 | **Echo matching audio** | When the source audio is already in your target language, choose whether to re-read it verbatim or stay silent (silent by default). |
 | **Remove hesitation words from subtitles** | Optional English/Hungarian filler-word cleanup for displayed captions only. Off by default. |
-| **Original audio between translated speech** | Optionally bring the captured tab audio back during pauses in the translated voice. Choose an original-audio level of 0%, 15% or 30% while the translation speaks. Off by default. |
+| **Original audio between translated speech** | Optionally bring the captured tab audio back during pauses in the translated voice. Choose an original-audio level of 0%, 5%, 15% or 30% while the translation speaks. If Gemini reports that the source speech is already in the target language and **Echo matching audio** is off, the original audio stays at 100%. Off by default. |
 
 ### Optional filler-word cleanup
 
@@ -85,7 +85,7 @@ This operates on **displayed captions only**; the Google Live Translate API does
 
 ### Optional original sound between translated speech
 
-Enable **Let original sound and music play between translated speech** in **Options** to restore the captured tab's original sound when the translated voice is not playing. A gain node smoothly lowers the original audio to a selectable volume (0%, 15% or 30%) during the translated speech and restores full volume between spoken segments.
+Enable **Let original sound and music play between translated speech** in **Options** to restore the captured tab's original sound when the translated voice is not playing. A gain node smoothly lowers the original audio to a selectable volume (0%, 5%, 15% or 30%) during the translated speech and restores full volume between spoken segments.
 
 This does **not** isolate music from original-language speech. All original tab audio returns while translation is silent, including any source-language speech during translation delay. The original behavior remains unchanged if the option is off.
 
