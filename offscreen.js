@@ -124,6 +124,10 @@ async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoT
   const captureContext = new AudioContext();
   await captureContext.audioWorklet.addModule('pcm-worklet.js');
   const playbackContext = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE, latencyHint: 'playback' });
+  // Keep the live output clock running while muted: suspending AudioContext
+  // accumulates stale translated speech and introduces unbounded delay.
+  const playbackGain = playbackContext.createGain();
+  playbackGain.connect(playbackContext.destination);
   if (captureContext.state === 'suspended') captureContext.resume().catch(() => {});
   if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {});
 
@@ -141,9 +145,15 @@ async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoT
     apiKey,
     targetLanguageCode,
     echoTargetLanguage: !!echoTargetLanguage,
+    // Updated from Gemini's inputTranscription.languageCode when provided.
+    // Null means unknown; do not infer the source language from target settings.
+    sourceLanguageCode: null,
     stream,
     captureContext,
     playbackContext,
+    playbackGain,
+    playbackStarted: false,
+    playbackPaused: false,
     sourceNode,
     workletNode,
     muteNode,
@@ -311,13 +321,69 @@ function drainQueue(s) {
   }
 }
 
+// ---------- translated speech playback toggle ----------
+
+function setPlaybackPaused(s, paused) {
+  if (session !== s || !s.playbackStarted) return;
+  const next = paused === true;
+  if (s.playbackPaused === next) return;
+  s.playbackPaused = next;
+  const playbackNow = s.playbackContext.currentTime;
+  const gain = s.playbackGain.gain;
+  gain.cancelScheduledValues(playbackNow);
+  gain.setTargetAtTime(next ? 0 : 1, playbackNow, 0.012);
+  if (next && s.originalAudioGain) {
+    // Paused translation should not keep ducking audible source media.
+    s.originalAudioIntervals = [];
+    const originalNow = s.captureContext.currentTime;
+    const original = s.originalAudioGain.gain;
+    original.cancelScheduledValues(originalNow);
+    original.setTargetAtTime(1, originalNow, DUCK_RELEASE_S);
+  }
+  sendToBackground({type: 'playbackState', tabId: s.tabId, active: true, paused: next});
+}
+
+// ---------- language-sensitive original audio ducking ----------
+
+// Keep language inference in the API, not in a heuristic over transcript text.
+// Gemini can emit e.g. "hu" or "hu-HU"; compare primary BCP-47 subtags.
+function primaryLanguage(code) {
+  if (typeof code !== 'string') return null;
+  const match = /^([a-z]{2,3})(?:-[a-z0-9]{2,8})*$/i.exec(code.trim());
+  return match && match[1].toLowerCase() !== 'und' ? match[1].toLowerCase() : null;
+}
+
+function shouldKeepOriginalAtFullVolume(s) {
+  const source = primaryLanguage(s.sourceLanguageCode);
+  const target = primaryLanguage(s.targetLanguageCode);
+  return !s.echoTargetLanguage && source !== null && target !== null && source === target;
+}
+
+function restoreOriginalAudio(s) {
+  if (!s.originalAudioGain) return;
+  s.originalAudioIntervals = [];
+  const now = s.captureContext.currentTime;
+  const gain = s.originalAudioGain.gain;
+  gain.cancelScheduledValues(now);
+  gain.setTargetAtTime(1, now, DUCK_RELEASE_S);
+}
+
+function updateSourceLanguage(s, code) {
+  const source = primaryLanguage(code);
+  if (!source || source === s.sourceLanguageCode) return;
+  s.sourceLanguageCode = source;
+  // Cancel both the current dip and any future ducking scheduled for a
+  // previous foreign-language utterance as soon as same-language input arrives.
+  if (shouldKeepOriginalAtFullVolume(s)) restoreOriginalAudio(s);
+}
+
 // ---------- downstream: Live API -> transcripts + translated audio ----------
 
 // Rebuild a small schedule of ducked intervals each time a dubbed PCM chunk is
 // scheduled. Merging adjacent chunks prevents pumping between syllables.
 // Timing is mapped between the separate capture/playback AudioContexts.
 function scheduleOriginalAudioDucking(s, playbackStart, playbackEnd) {
-  if (!s.originalAudioGain) return;
+  if (!s.originalAudioGain || s.playbackPaused || shouldKeepOriginalAtFullVolume(s)) return;
   const now = s.captureContext.currentTime;
   const offset = now - s.playbackContext.currentTime;
   const start = playbackStart + offset;
@@ -399,6 +465,12 @@ function handleServerMessage(s, data) {
   const content = msg.serverContent;
   if (!content) return;
 
+  // Process language metadata whether or not the CC panel is collapsed. Audio
+  // mixing must not depend on whether subtitles are being rendered.
+  if (content.inputTranscription && typeof content.inputTranscription.languageCode === 'string') {
+    updateSourceLanguage(s, content.inputTranscription.languageCode);
+  }
+
   // Translation audio continues normally, but minimized captions never reach
   // the service worker, content script, or page DOM.
   if (captionsVisible) {
@@ -433,7 +505,7 @@ function playTranslatedAudio(s, base64Data) {
     buffer.copyToChannel(samples, 0);
     const node = s.playbackContext.createBufferSource();
     node.buffer = buffer;
-    node.connect(s.playbackContext.destination);
+    node.connect(s.playbackGain);
 
     const now = s.playbackContext.currentTime;
 
@@ -468,6 +540,10 @@ function playTranslatedAudio(s, base64Data) {
     scheduleOriginalAudioDucking(s, playStart, playEnd);
     node.start(playStart);
     s.nextPlayTime = playEnd;
+    if (!s.playbackStarted) {
+      s.playbackStarted = true;
+      sendToBackground({ type: 'playbackState', tabId: s.tabId, active: true, paused: false });
+    }
   } catch (e) {}
 }
 
@@ -487,6 +563,7 @@ function stopSessionInternal() {
     s.workletNode.disconnect();
     s.muteNode.disconnect();
     if (s.originalAudioGain) s.originalAudioGain.disconnect();
+    if (s.playbackGain) s.playbackGain.disconnect();
   } catch (e) {}
   try {
     s.stream.getTracks().forEach((t) => t.stop());
@@ -516,6 +593,10 @@ chrome.runtime.onMessage.addListener((message, sender) => {
       sendToBackground({ type: 'error', tabId: message.tabId, message: String((err && err.message) || err) });
       stopSessionInternal();
     });
+  } else if (message.type === 'setPlaybackPaused') {
+    if (session && session.tabId === message.tabId) {
+      setPlaybackPaused(session, message.paused);
+    }
   } else if (message.type === 'captionVisibility') {
     if (captionTabId === message.tabId) captionsVisible = message.visible === true;
   } else if (message.type === 'stop') {
