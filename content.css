@@ -11,7 +11,7 @@
   background: rgba(12, 14, 20, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  padding: 11px 46px 13px 18px;
+  padding: 11px 88px 13px 18px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: #f3f4f6;
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
@@ -98,11 +98,85 @@
   display: none;
 }
 
-/* Minimize / restore captions without interrupting audio translation. */
-#__live-translate-overlay .lt-toggle {
+/* Shared audio control and CC/X carrier. The same DOM serves both views. */
+#__live-translate-overlay .lt-controls {
   position: absolute;
   top: 6px;
   right: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+#__live-translate-overlay .lt-playback-toggle {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 50%;
+  color: #f9fafb;
+  background: rgba(255, 255, 255, 0.09);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#__live-translate-overlay[data-playback-active="false"] .lt-playback-toggle {
+  display: none;
+}
+
+#__live-translate-overlay .lt-playback-toggle:hover,
+#__live-translate-overlay .lt-playback-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#__live-translate-overlay .lt-playback-toggle:focus-visible {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 2px;
+}
+
+#__live-translate-overlay .lt-pause-bars {
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+}
+
+#__live-translate-overlay .lt-pause-bars::before,
+#__live-translate-overlay .lt-pause-bars::after {
+  content: '';
+  width: 4px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+#__live-translate-overlay .lt-play-triangle {
+  display: none;
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid currentColor;
+}
+
+#__live-translate-overlay .lt-playback-toggle[data-paused="true"] .lt-pause-bars {
+  display: none;
+}
+
+#__live-translate-overlay .lt-playback-toggle[data-paused="true"] .lt-play-triangle {
+  display: block;
+}
+
+/* Minimize / restore captions without interrupting audio translation. */
+#__live-translate-overlay .lt-toggle {
+  position: static;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -139,12 +213,12 @@
   right: calc(12px + env(safe-area-inset-right, 0px));
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   transform: none;
-  width: 48px;
+  width: 100px;
   height: 48px;
   min-width: 0;
   max-width: none;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   text-align: center;
   animation: none;
   backdrop-filter: none;
@@ -160,10 +234,35 @@
   display: inline;
 }
 
-#__live-translate-overlay[data-collapsed="true"] .lt-toggle {
+#__live-translate-overlay[data-collapsed="true"] .lt-controls {
   position: static;
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
+  padding: 0 5px;
+  gap: 4px;
+}
+
+#__live-translate-overlay[data-collapsed="true"] .lt-playback-toggle {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+}
+
+#__live-translate-overlay[data-collapsed="true"][data-playback-active="false"] {
+  width: 48px;
+  border-radius: 50%;
+}
+
+#__live-translate-overlay[data-collapsed="true"][data-playback-active="false"] .lt-controls {
+  padding: 0;
+}
+
+#__live-translate-overlay[data-collapsed="true"] .lt-toggle {
+  position: static;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   border-radius: 50%;
   background: transparent;
   font-size: 15px;
