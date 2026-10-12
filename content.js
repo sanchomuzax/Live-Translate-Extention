@@ -16,6 +16,9 @@
   let rawInput = '';
   let removeTimer = null;
   let toggleButton = null;
+  let playbackButton = null;
+  let playbackActive = false;
+  let playbackPaused = false;
   let collapsed = false;
   let filterFillers = false;
 
@@ -61,9 +64,33 @@
     toggleButton.append(closeIcon, openIcon);
     toggleButton.addEventListener('click', () => setCollapsed(!collapsed));
 
-    overlay.append(captionContent, toggleButton);
+    // Both controls share one carrier: [ || CC ] / [ ▶ CC ] when collapsed.
+    // In expanded mode the pause/play button is immediately left of X.
+    const controls = document.createElement('div');
+    controls.className = 'lt-controls';
+    playbackButton = document.createElement('button');
+    playbackButton.type = 'button';
+    playbackButton.className = 'lt-playback-toggle';
+    const pauseIcon = document.createElement('span');
+    pauseIcon.className = 'lt-pause-bars';
+    pauseIcon.setAttribute('aria-hidden', 'true');
+    const playIcon = document.createElement('span');
+    playIcon.className = 'lt-play-triangle';
+    playIcon.setAttribute('aria-hidden', 'true');
+    playbackButton.append(pauseIcon, playIcon);
+    playbackButton.addEventListener('click', () => {
+      if (!playbackActive) return;
+      chrome.runtime.sendMessage({
+        target: 'background',
+        type: 'setPlaybackPaused',
+        paused: !playbackPaused,
+      }).catch(() => {});
+    });
+    controls.append(playbackButton, toggleButton);
+    overlay.append(captionContent, controls);
     overlay.dataset.collapsed = String(collapsed);
     updateToggleLabel();
+    updatePlaybackUI();
     (document.body || document.documentElement).appendChild(overlay);
   }
 
@@ -75,6 +102,9 @@
     if (overlay) overlay.remove();
     overlay = null;
     toggleButton = null;
+    playbackButton = null;
+    playbackActive = false;
+    playbackPaused = false;
     rawOutput = '';
     rawInput = '';
     collapsed = false;
@@ -86,6 +116,23 @@
     toggleButton.setAttribute('aria-label', label);
     toggleButton.setAttribute('aria-expanded', String(!collapsed));
     toggleButton.title = label;
+  }
+
+  function updatePlaybackUI() {
+    if (!overlay || !playbackButton) return;
+    overlay.dataset.playbackActive = String(playbackActive);
+    playbackButton.dataset.paused = String(playbackPaused);
+    const label = playbackPaused ? 'Resume translated speech' : 'Pause translated speech';
+    playbackButton.setAttribute('aria-label', label);
+    playbackButton.setAttribute('aria-pressed', String(playbackPaused));
+    playbackButton.title = label;
+  }
+
+  function setPlaybackState(active, paused) {
+    playbackActive = active === true;
+    playbackPaused = paused === true;
+    ensureOverlay();
+    updatePlaybackUI();
   }
 
   function setCollapsed(nextCollapsed, notify = true) {
@@ -157,6 +204,9 @@
       if (typeof message.filterFillers === 'boolean') filterFillers = message.filterFillers;
       // Restore the minimized state after a page navigation.
       if (typeof message.collapsed === 'boolean') setCollapsed(message.collapsed, false);
+      if (typeof message.playbackActive === 'boolean') {
+        setPlaybackState(message.playbackActive, message.playbackPaused);
+      }
       switch (message.state) {
         case 'starting':
           setStatus('connecting', 'Connecting…');
@@ -175,6 +225,11 @@
           removeOverlay();
           break;
       }
+      return;
+    }
+
+    if (message.type === 'playbackState') {
+      setPlaybackState(message.active, message.paused);
       return;
     }
 
