@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] — 2026-10-12
+
+### Fixed
+
+- When **Echo matching audio** is disabled and Gemini detects that the incoming speech is already in the target language, **Original sound between translated speech** now preserves the source at 100% instead of ducking it.
+- Existing scheduled ducking is cancelled when the source switches into the target language; when a different source language is detected, the chosen 0% / 15% / 30% ducking applies to subsequent translated voice.
+- Uses Gemini's input transcription language metadata, including while the CC subtitle panel is minimized. If the model does not report a language, the previous audio mixing behavior is kept.
+
 ## [1.7.0] — 2026-10-12
 
 ### Added
