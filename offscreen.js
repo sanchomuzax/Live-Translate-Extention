@@ -124,6 +124,10 @@ async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoT
   const captureContext = new AudioContext();
   await captureContext.audioWorklet.addModule('pcm-worklet.js');
   const playbackContext = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE, latencyHint: 'playback' });
+  // Keep the live output clock running while muted: suspending AudioContext
+  // accumulates stale translated speech and introduces unbounded delay.
+  const playbackGain = playbackContext.createGain();
+  playbackGain.connect(playbackContext.destination);
   if (captureContext.state === 'suspended') captureContext.resume().catch(() => {});
   if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {});
 
@@ -144,6 +148,9 @@ async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoT
     stream,
     captureContext,
     playbackContext,
+    playbackGain,
+    playbackStarted: false,
+    playbackPaused: false,
     sourceNode,
     workletNode,
     muteNode,
@@ -311,13 +318,35 @@ function drainQueue(s) {
   }
 }
 
+// ---------- translated speech playback toggle ----------
+
+function setPlaybackPaused(s, paused) {
+  if (session !== s || !s.playbackStarted) return;
+  const next = paused === true;
+  if (s.playbackPaused === next) return;
+  s.playbackPaused = next;
+  const playbackNow = s.playbackContext.currentTime;
+  const gain = s.playbackGain.gain;
+  gain.cancelScheduledValues(playbackNow);
+  gain.setTargetAtTime(next ? 0 : 1, playbackNow, 0.012);
+  if (next && s.originalAudioGain) {
+    // Paused translation should not keep ducking audible source media.
+    s.originalAudioIntervals = [];
+    const originalNow = s.captureContext.currentTime;
+    const original = s.originalAudioGain.gain;
+    original.cancelScheduledValues(originalNow);
+    original.setTargetAtTime(1, originalNow, DUCK_RELEASE_S);
+  }
+  sendToBackground({type: 'playbackState', tabId: s.tabId, active: true, paused: next});
+}
+
 // ---------- downstream: Live API -> transcripts + translated audio ----------
 
 // Rebuild a small schedule of ducked intervals each time a dubbed PCM chunk is
 // scheduled. Merging adjacent chunks prevents pumping between syllables.
 // Timing is mapped between the separate capture/playback AudioContexts.
 function scheduleOriginalAudioDucking(s, playbackStart, playbackEnd) {
-  if (!s.originalAudioGain) return;
+  if (!s.originalAudioGain || s.playbackPaused) return;
   const now = s.captureContext.currentTime;
   const offset = now - s.playbackContext.currentTime;
   const start = playbackStart + offset;
@@ -433,7 +462,7 @@ function playTranslatedAudio(s, base64Data) {
     buffer.copyToChannel(samples, 0);
     const node = s.playbackContext.createBufferSource();
     node.buffer = buffer;
-    node.connect(s.playbackContext.destination);
+    node.connect(s.playbackGain);
 
     const now = s.playbackContext.currentTime;
 
@@ -468,6 +497,10 @@ function playTranslatedAudio(s, base64Data) {
     scheduleOriginalAudioDucking(s, playStart, playEnd);
     node.start(playStart);
     s.nextPlayTime = playEnd;
+    if (!s.playbackStarted) {
+      s.playbackStarted = true;
+      sendToBackground({ type: 'playbackState', tabId: s.tabId, active: true, paused: false });
+    }
   } catch (e) {}
 }
 
@@ -487,6 +520,7 @@ function stopSessionInternal() {
     s.workletNode.disconnect();
     s.muteNode.disconnect();
     if (s.originalAudioGain) s.originalAudioGain.disconnect();
+    if (s.playbackGain) s.playbackGain.disconnect();
   } catch (e) {}
   try {
     s.stream.getTracks().forEach((t) => t.stop());
@@ -516,6 +550,10 @@ chrome.runtime.onMessage.addListener((message, sender) => {
       sendToBackground({ type: 'error', tabId: message.tabId, message: String((err && err.message) || err) });
       stopSessionInternal();
     });
+  } else if (message.type === 'setPlaybackPaused') {
+    if (session && session.tabId === message.tabId) {
+      setPlaybackPaused(session, message.paused);
+    }
   } else if (message.type === 'captionVisibility') {
     if (captionTabId === message.tabId) captionsVisible = message.visible === true;
   } else if (message.type === 'stop') {
