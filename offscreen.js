@@ -158,7 +158,7 @@ async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoT
     workletNode,
     muteNode,
     originalAudioGain,
-    duckingLevel: [0, 0.15, 0.3].includes(duckingLevel) ? duckingLevel : 0.15,
+    duckingLevel: [0, 0.05, 0.15, 0.3].includes(duckingLevel) ? duckingLevel : 0.15,
     originalAudioIntervals: [],
     ws: null,
     ready: false,
