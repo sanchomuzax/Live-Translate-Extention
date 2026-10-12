@@ -116,7 +116,7 @@ async function startTranslation(tab) {
     echoTargetLanguage: !!echoTargetLanguage,
     bufferMode: bufferMode || 'balanced',
     originalAudioDucking: !!originalAudioDucking,
-    duckingLevel: [0, 0.15, 0.3].includes(duckingLevel) ? duckingLevel : 0.15,
+    duckingLevel: [0, 0.05, 0.15, 0.3].includes(duckingLevel) ? duckingLevel : 0.15,
   });
 
   await setActiveTabId(tab.id);
