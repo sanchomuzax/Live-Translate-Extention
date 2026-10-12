@@ -5,6 +5,11 @@ async function isCaptionCollapsed() {
   return captionCollapsed === true;
 }
 
+async function getPlaybackState() {
+  const { playbackActive, playbackPaused } = await chrome.storage.session.get(['playbackActive', 'playbackPaused']);
+  return { playbackActive: playbackActive === true, playbackPaused: playbackPaused === true };
+}
+
 // Active-tab state lives in chrome.storage.session, not in memory: MV3 service
 // workers are killed at will and an in-memory Map would forget a running session.
 async function getActiveTabId() {
@@ -97,7 +102,7 @@ async function startTranslation(tab) {
   const prevTabId = await getActiveTabId();
   if (prevTabId !== null) await stopTranslation(prevTabId);
 
-  await chrome.storage.session.remove('captionCollapsed');
+  await chrome.storage.session.remove(['captionCollapsed', 'playbackActive', 'playbackPaused']);
   await ensureOffscreenDocument();
   await injectContentScript(tab.id);
   await notifyTab(tab.id, { type: 'status', state: 'starting', filterFillers: !!filterFillers });
@@ -122,7 +127,7 @@ async function stopTranslation(tabId, { notifyStopped = true } = {}) {
   await sendToOffscreen({ type: 'stop', tabId });
   await closeOffscreenDocument();
   await setActiveTabId(null);
-  await chrome.storage.session.remove('captionCollapsed');
+  await chrome.storage.session.remove(['captionCollapsed', 'playbackActive', 'playbackPaused']);
   await setBadge(tabId, '');
   if (notifyStopped) await notifyTab(tabId, { type: 'status', state: 'stopped' });
 }
@@ -167,19 +172,27 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if ((await getActiveTabId()) !== tabId) return;
   if (await injectContentScript(tabId)) {
     const { filterFillers } = await chrome.storage.local.get('filterFillers');
-    await notifyTab(tabId, { type: 'status', state: 'running', collapsed: await isCaptionCollapsed(), filterFillers: !!filterFillers });
+    await notifyTab(tabId, {
+      type: 'status', state: 'running',
+      collapsed: await isCaptionCollapsed(), filterFillers: !!filterFillers,
+      ...await getPlaybackState(),
+    });
   }
 });
 
 // Listen only to the active tab's content script. Keep the state in session
 // storage so an MV3 service worker restart or page navigation cannot lose it.
 chrome.runtime.onMessage.addListener((message, sender) => {
-  if (!message || message.target !== 'background' || message.type !== 'captionVisibility') return;
+  if (!message || message.target !== 'background' || !['captionVisibility', 'setPlaybackPaused'].includes(message.type)) return;
   if (!sender || sender.id !== chrome.runtime.id || typeof sender.tab?.id !== 'number') return;
 
   const tabId = sender.tab.id;
   (async () => {
     if ((await getActiveTabId()) !== tabId) return;
+    if (message.type === 'setPlaybackPaused') {
+      await sendToOffscreen({ type: 'setPlaybackPaused', tabId, paused: message.paused === true });
+      return;
+    }
     const collapsed = message.collapsed === true;
     await chrome.storage.session.set({ captionCollapsed: collapsed });
     await sendToOffscreen({ type: 'captionVisibility', tabId, visible: !collapsed });
@@ -196,6 +209,17 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   switch (message.type) {
     case 'ready':
       notifyTab(tabId, { type: 'status', state: 'running' });
+      break;
+    case 'playbackState':
+      // The offscreen document is the source of truth; persist across MV3
+      // service-worker restarts and content-script reinjection.
+      (async () => {
+        if ((await getActiveTabId()) !== tabId) return;
+        const playbackActive = message.active === true;
+        const playbackPaused = message.paused === true;
+        await chrome.storage.session.set({ playbackActive, playbackPaused });
+        await notifyTab(tabId, { type: 'playbackState', active: playbackActive, paused: playbackPaused });
+      })().catch((e) => console.warn('Unable to sync translated audio controls', e));
       break;
     case 'reconnecting':
       notifyTab(tabId, { type: 'status', state: 'reconnecting' });
