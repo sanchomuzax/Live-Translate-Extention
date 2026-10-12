@@ -78,3 +78,36 @@ test('settings and captured audio pipeline are guarded behind opt-in',()=>{
   assert.match(offscreen, /originalAudioDucking \? captureContext.createGain\(\) : null/);
   assert.match(offscreen, /sourceNode.connect\(originalAudioGain\)/);
 });
+
+test('5% original-audio level is available, accepted and scheduled', () => {
+  const opts = fs.readFileSync('options.js', 'utf8');
+  const page = fs.readFileSync('options.html', 'utf8');
+  const bg = fs.readFileSync('background.js', 'utf8');
+  assert.match(page, /<option value="0\.05">Very quiet \(5%, subtle ambience\)<\/option>/);
+  assert.match(opts, /\['0', '0\.05', '0\.15', '0\.30'\]\.includes\(String\(duckingLevel\)\)/);
+  assert.match(bg, /\[0, 0\.05, 0\.15, 0\.3\]\.includes\(duckingLevel\)/);
+  assert.match(offscreen, /\[0, 0\.05, 0\.15, 0\.3\]\.includes\(duckingLevel\)/);
+  const events = [];
+  context.s = {
+    targetLanguageCode: 'hu',
+    sourceLanguageCode: 'en',
+    echoTargetLanguage: false,
+    captureContext: {currentTime: 10},
+    playbackContext: {currentTime: 4},
+    originalAudioGain: {gain: {
+      value: 1,
+      cancelScheduledValues() {},
+      setValueAtTime() {},
+      setTargetAtTime(v) {events.push(v);},
+    }},
+    duckingLevel: 0.05,
+    originalAudioIntervals: [],
+  };
+  duck({start:4.4,end:4.6});
+  assert.ok(events.includes(0.05), '5% is used for non-matching speech');
+  assert.ok(events.includes(1), 'original volume is restored between translated segments');
+  context.s.sourceLanguageCode = 'hu';
+  const previousEvents = events.length;
+  duck({start:5,end:5.2});
+  assert.equal(events.length, previousEvents, 'matching speech stays at full source volume when echo is off');
+});
