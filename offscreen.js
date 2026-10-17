@@ -100,7 +100,7 @@ function pcm16BytesToFloat32(bytes) {
 
 // ---------- session lifecycle ----------
 
-async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, originalAudioDucking, duckingLevel }) {
+async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, originalAudioDucking, duckingLevel, reduceFalseSpeechStarts }) {
   stopSessionInternal();
 
   const buffering = BUFFER_MODES[bufferMode] || BUFFER_MODES.balanced;
@@ -145,6 +145,7 @@ async function startSession({ tabId, streamId, apiKey, targetLanguageCode, echoT
     apiKey,
     targetLanguageCode,
     echoTargetLanguage: !!echoTargetLanguage,
+    reduceFalseSpeechStarts: !!reduceFalseSpeechStarts,
     // Updated from Gemini's inputTranscription.languageCode when provided.
     // Null means unknown; do not infer the source language from target settings.
     sourceLanguageCode: null,
@@ -222,6 +223,15 @@ function connectWebSocket(s) {
               echoTargetLanguage: s.echoTargetLanguage,
             },
           },
+          // Google documents this at setup level, not inside generationConfig.
+          // Leave the existing VAD defaults intact unless users opt in.
+          ...(s.reduceFalseSpeechStarts ? {
+            realtimeInputConfig: {
+              automaticActivityDetection: {
+                startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+              },
+            },
+          } : {}),
           inputAudioTranscription: {},
           outputAudioTranscription: {},
         },
