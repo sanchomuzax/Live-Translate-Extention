@@ -80,7 +80,7 @@ async function injectContentScript(tabId) {
 }
 
 async function startTranslation(tab) {
-  const { apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, filterFillers, originalAudioDucking, duckingLevel } = await chrome.storage.local.get([
+  const { apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, filterFillers, originalAudioDucking, duckingLevel, reduceFalseSpeechStarts } = await chrome.storage.local.get([
     'apiKey',
     'targetLanguageCode',
     'echoTargetLanguage',
@@ -88,6 +88,7 @@ async function startTranslation(tab) {
     'filterFillers',
     'originalAudioDucking',
     'duckingLevel',
+    'reduceFalseSpeechStarts',
   ]);
 
   if (!apiKey) {
@@ -116,6 +117,7 @@ async function startTranslation(tab) {
     echoTargetLanguage: !!echoTargetLanguage,
     bufferMode: bufferMode || 'balanced',
     originalAudioDucking: !!originalAudioDucking,
+    reduceFalseSpeechStarts: !!reduceFalseSpeechStarts,
     duckingLevel: [0, 0.05, 0.15, 0.3].includes(duckingLevel) ? duckingLevel : 0.15,
   });
 

@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.7.3] — 2026-10-17
+
+### Experimental
+
+- Optional **Reduce false speech detection in music and background noise** toggle in Options, off by default.
+- When enabled, request the Gemini Live API's `START_SENSITIVITY_LOW` automatic voice activity detection threshold. This may reduce phantom translated speech during music or speech pauses; it may also fail to recognize short or quiet speech.
+- No transcript-based audio muting: output audio and transcript events are asynchronous and may arrive in different orders. Captions, original-audio mixing and the pause/play control remain unchanged.
+- Requires restarting the translation session after changing the option.
+
 ## [1.7.2] — 2026-10-12
 
 ### Added
