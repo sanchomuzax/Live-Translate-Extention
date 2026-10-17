@@ -81,6 +81,7 @@ To keep the page clear, click **×** on the top-right corner of the subtitle pan
 | **Echo matching audio** | When the source audio is already in your target language, choose whether to re-read it verbatim or stay silent (silent by default). |
 | **Remove fillers from subtitles** | Optional cleanup for common English/Hungarian hesitation words, e.g. “um”, “uh”, “ööö”, “izé”, and comma-separated introductory phrases. Affects subtitles only, **not translated speech audio**. Disabled by default. |
 | **Original sound between translated speech** | Optional dynamic volume mixing: hear the original tab sound/music at full volume between translated voice segments, duck to 0%, 5%, 15%, or 30% while translated voice plays. When source speech is detected as already in the target language and **Echo matching audio** is off, the original stays at 100%. Disabled by default. |
+| **Reduce false speech detection (experimental)** | Optional low-sensitivity Gemini VAD for music/noisy content that triggers phantom speech. Off by default; may also skip short or quiet speech. Restart the session after changing it. |
 
 ---
 
