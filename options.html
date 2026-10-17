@@ -86,6 +86,14 @@
       </section>
 
       <section>
+        <label class="checkbox">
+          <input id="reduceFalseSpeechStarts" type="checkbox">
+          <span>Reduce false speech detection in music and background noise (experimental)</span>
+        </label>
+        <p class="hint">Uses Gemini's less-sensitive speech-start detection. May reduce repeated or invented translated speech during musical pauses, but quiet or very short real speech may be missed. Optional, off by default. Restart translation after changing this setting.</p>
+      </section>
+
+      <section>
         <label for="duckingLevel">Original audio volume while translation speaks</label>
         <select id="duckingLevel">
           <option value="0">Mute original (0%, clearest translation)</option>
