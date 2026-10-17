@@ -33,6 +33,7 @@ const bufferModeSelect = document.getElementById('bufferMode');
 const echoCheckbox = document.getElementById('echoTargetLanguage');
 const filterFillersCheckbox = document.getElementById('filterFillers');
 const originalAudioDuckingCheckbox = document.getElementById('originalAudioDucking');
+const reduceFalseSpeechStartsCheckbox = document.getElementById('reduceFalseSpeechStarts');
 const duckingLevelSelect = document.getElementById('duckingLevel');
 const saveButton = document.getElementById('save');
 
@@ -50,7 +51,7 @@ for (const [code, name] of LANGUAGES) {
 }
 
 async function load() {
-  const { apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, filterFillers, originalAudioDucking, duckingLevel } = await chrome.storage.local.get([
+  const { apiKey, targetLanguageCode, echoTargetLanguage, bufferMode, filterFillers, originalAudioDucking, duckingLevel, reduceFalseSpeechStarts } = await chrome.storage.local.get([
     'apiKey',
     'targetLanguageCode',
     'echoTargetLanguage',
@@ -58,6 +59,7 @@ async function load() {
     'filterFillers',
     'originalAudioDucking',
     'duckingLevel',
+    'reduceFalseSpeechStarts',
   ]);
   if (apiKey) apiKeyInput.value = apiKey;
   targetLanguageSelect.value = targetLanguageCode || 'vi';
@@ -65,6 +67,7 @@ async function load() {
   echoCheckbox.checked = !!echoTargetLanguage;
   filterFillersCheckbox.checked = !!filterFillers;
   originalAudioDuckingCheckbox.checked = !!originalAudioDucking;
+  reduceFalseSpeechStartsCheckbox.checked = !!reduceFalseSpeechStarts;
   duckingLevelSelect.value = ['0', '0.05', '0.15', '0.30'].includes(String(duckingLevel)) ? String(duckingLevel) : '0.15';
   updateDuckingControls();
 }
@@ -117,6 +120,7 @@ saveButton.addEventListener('click', async () => {
     bufferMode: bufferModeSelect.value,
     filterFillers: filterFillersCheckbox.checked,
     originalAudioDucking: originalAudioDuckingCheckbox.checked,
+    reduceFalseSpeechStarts: reduceFalseSpeechStartsCheckbox.checked,
     duckingLevel: Number(duckingLevelSelect.value),
   });
   savedNote.textContent = key ? 'Saved. Now just click the extension icon on the tab you want translated.' : 'Saved (no API key set).';
